@@ -1,5 +1,6 @@
 package everything.controller;
 
+import everything.Main;
 import everything.classes.Everything;
 import everything.classes.File;
 import everything.util.EverythingUtil;
@@ -7,6 +8,7 @@ import everything.util.RequestUtil;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
+import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
@@ -17,16 +19,17 @@ import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
-import javafx.scene.input.MouseButton;
-import javafx.scene.input.MouseEvent;
+import javafx.scene.input.*;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.text.Text;
+import javafx.stage.FileChooser;
 import javafx.util.Callback;
+import util.FileUtil;
 
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.net.URL;
 import java.util.*;
 
@@ -102,6 +105,7 @@ public class MainController implements Initializable {
     protected TreeItem viewDirItem;
 
     protected String charSet = "UTF-8";
+
 
 
     private void setStatus(String str) {
@@ -180,7 +184,7 @@ public class MainController implements Initializable {
         try {
             TreeItem pathItem = viewDirItem;
             while (!pathItem.getValue().equals("")) {
-                path = EverythingUtil.joinPath((String) pathItem.getValue(), path);
+                path = EverythingUtil.joinPath(new String[]{(String) pathItem.getValue(), path});
                 pathItem = pathItem.getParent();
             }
             currentPathCombo.setValue(path);
@@ -250,6 +254,18 @@ public class MainController implements Initializable {
                     }
 
                 };
+                tc.addEventFilter(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+                    @Override
+                    public void handle(MouseEvent event) {
+                        if(event.getButton().equals(MouseButton.SECONDARY)) {
+                            if (getSelectedFile().isDir()) {
+                                tc.setContextMenu(getContextMenu("dir"));
+                            } else {
+                                tc.setContextMenu(getContextMenu("file"));
+                            }
+                        }
+                    }
+                });
                 tc.setAlignment(Pos.BOTTOM_LEFT);
                 return tc;
             }
@@ -282,6 +298,18 @@ public class MainController implements Initializable {
                     }
                 };
                 tc.setAlignment(Pos.CENTER);
+                tc.addEventFilter(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+                    @Override
+                    public void handle(MouseEvent event) {
+                        if(event.getButton().equals(MouseButton.SECONDARY)) {
+                            if (getSelectedFile().isDir()) {
+                                tc.setContextMenu(getContextMenu("dir"));
+                            } else {
+                                tc.setContextMenu(getContextMenu("file"));
+                            }
+                        }
+                    }
+                });
                 return tc;
             }
         });
@@ -308,9 +336,73 @@ public class MainController implements Initializable {
                     }
                 };
                 tc.setAlignment(Pos.CENTER);
+                tc.addEventFilter(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+                    @Override
+                    public void handle(MouseEvent event) {
+                        if(event.getButton().equals(MouseButton.SECONDARY)) {
+                            if (getSelectedFile().isDir()) {
+                                tc.setContextMenu(getContextMenu("dir"));
+                            } else {
+                                tc.setContextMenu(getContextMenu("file"));
+                            }
+                        }
+                    }
+                });
                 return tc;
             }
         });
+    }
+
+    private File getSelectedFile(){
+        return (File) fileListTableView.getSelectionModel().getSelectedItem();
+    }
+
+    private void exportFile(String downPath){
+        try {
+            filePath = EverythingUtil.joinPath(new String[]{path, getSelectedFile().getName()});
+            String fileContent = EverythingUtil.getFile(filePath, charSet);
+            FileUtil.writeFile(downPath, fileContent);
+            setStatus("下载成功");
+        } catch (Exception e){
+            setStatus("下载失败");
+        }
+    }
+
+
+    private ContextMenu getContextMenu(String type){
+        // 文件窗口添加右键菜单
+        ContextMenu contextMenu = new ContextMenu();
+        // 菜单项
+        MenuItem copyBg = new MenuItem("复制url");
+        copyBg.setOnAction(new EventHandler<ActionEvent>() {
+            public void handle(ActionEvent event) {
+                Clipboard clipboard = Clipboard.getSystemClipboard();
+                ClipboardContent clipboardContent = new ClipboardContent();
+                clipboardContent.putString(EverythingUtil.joinPath(new String[]{Everything.everything.getUrl(), path, getSelectedFile().getName()}));
+                clipboard.setContent(clipboardContent);
+                setStatus("复制url成功: " + clipboardContent.getString());
+            }
+        });
+        // 菜单项
+        MenuItem downBg = new MenuItem("下载至本地");
+        downBg.setOnAction(new EventHandler<ActionEvent>() {
+            public void handle(ActionEvent event) {
+                FileChooser fileChooser = new FileChooser();
+                fileChooser.setTitle("选择下载路径");
+                fileChooser.setInitialFileName(getSelectedFile().getName());
+                java.io.File file = fileChooser.showSaveDialog(Main.getStage());
+                if(file!=null){
+                    exportFile(file.getAbsolutePath());
+                } else{
+                    setStatus("下载取消");
+                }
+            }
+        });
+        if(type.equals("dir")){
+            downBg.setDisable(true);
+        }
+        contextMenu.getItems().addAll(copyBg, downBg);
+        return contextMenu;
     }
 
 
@@ -353,7 +445,7 @@ public class MainController implements Initializable {
             @Override
             public void handle(MouseEvent event) {
                 if (event.getClickCount() == 2) {
-                    File selectFile = (File) fileListTableView.getSelectionModel().getSelectedItem();
+                    File selectFile = getSelectedFile();
                     if (selectFile.isDir()) {
                         if (selectFile.getIndex() == -1) {
                             dirTree.getSelectionModel().select(viewDirItem.getParent());
@@ -362,7 +454,7 @@ public class MainController implements Initializable {
                         }
                     } else {
                         if (selectFile.getTotalSize() < 1024) {
-                            filePath = EverythingUtil.joinPath(path, selectFile.getName());
+                            filePath = EverythingUtil.joinPath(new String[]{path, selectFile.getName()});
                             viewFile();
                         } else {
                             setStatus("文件大于1MB，请在浏览器下载");

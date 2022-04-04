@@ -35,7 +35,7 @@ public class EverythingUtil {
         setPath(path);
         List<File> dirList = new ArrayList<>();
         List<File> fileList = new ArrayList<>();
-        String resp = RequestUtil.get(EverythingUtil.joinPath(Everything.everything.getUrl(), path.replaceAll(" ", "%20")), "");
+        String resp = RequestUtil.get(EverythingUtil.joinPath(new String[]{Everything.everything.getUrl(), path.replaceAll(" ", "%20")}), "");
         String dirPattern = "<a href=\"(.*?)\"><img class=\"icon\" src=\"/folder.gif\" alt=\"\">(.*?)</a>.*?<td class=\"modifieddata\"><span class=\"nobr\"><nobr><span class=\"nobr\"><nobr>(.*?)</nobr>";
         String filePattern = "<a href=\"(.*?)\"><img class=\"icon\" src=\"/file.gif\" alt=\"\">(.*?)</a>.*?<td class=\"sizedata\"><span class=\"nobr\"><nobr>(.*?)</nobr>.*?<td class=\"modifieddata\"><span class=\"nobr\"><nobr><span class=\"nobr\"><nobr>(.*?)</nobr>";
 
@@ -56,16 +56,22 @@ public class EverythingUtil {
         Everything.everything.setDirList(dirList);
     }
 
-    public static String joinPath(String root, String path){
-        if(root.endsWith("/")){
-            return root + path;
-        } else{
-            return root + "/" + path;
+    public static String joinPath(String[] path_list){
+        String root = path_list[0];
+        for(int i=1; i<path_list.length; i++){
+            String path = path_list[i];
+            if(root.endsWith("/")){
+                root =  root + path;
+            } else{
+                root = root + "/" + path;
+            }
         }
+        return root;
     }
 
+
     public static String getFile(String path, String charSet) throws Exception{
-        String resp = RequestUtil.get(joinPath(Everything.everything.getUrl(), path), "");
+        String resp = RequestUtil.get(joinPath(new String[]{Everything.everything.getUrl(), path}), "");
         if(charSet.equals("GBK")){
             resp = new String(resp.getBytes(StandardCharsets.UTF_8), "GBK");
         }
@@ -73,6 +79,6 @@ public class EverythingUtil {
     }
 
     public static ImageView getImage(String imageName){
-        return new ImageView(new Image(joinPath("/resources", imageName)));
+        return new ImageView(new Image(joinPath(new String[]{"/resources", imageName})));
     }
 }

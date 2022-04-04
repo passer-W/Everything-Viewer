@@ -9,6 +9,7 @@ import javafx.stage.Stage;
 
 public class Main extends Application {
 
+    private static Stage stage;
     @Override
     public void start(Stage stage) throws Exception{
         Parent root = FXMLLoader.load(getClass().getResource("/resources/main.fxml"));
@@ -16,6 +17,11 @@ public class Main extends Application {
         stage.getIcons().add(new Image("/resources/favicon.png"));
         stage.setScene(new Scene(root, 1000, 700));
         stage.show();
+        this.stage = stage;
+    }
+
+    public static Stage getStage(){
+        return stage;
     }
 
 
